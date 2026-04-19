@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">.    
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -205,6 +205,11 @@
   <input id="apiInput" type="password" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx" />
   <button class="btn" onclick="saveKey()">INITIALIZE SYSTEM</button>
   <p style="font-size:0.62rem;opacity:0.3">Key is stored locally in your browser only.</p>
+</div>
+
+<!-- Reset Key Button (always visible bottom right) -->
+<div style="position:fixed;bottom:16px;right:16px;z-index:300;">
+  <button class="btn" style="font-size:0.45rem;padding:7px 12px;opacity:0.4;" onclick="resetKey()">⬡ CHANGE KEY</button>
 </div>
 
 <!-- Corners -->
@@ -417,6 +422,14 @@
 
   // Enter key on API input
   $('apiInput').addEventListener('keydown', e => { if (e.key==='Enter') saveKey(); });
+
+  function resetKey() {
+    localStorage.removeItem('jarvis_groq_key');
+    GROQ_KEY = '';
+    stopSystem();
+    $('apiInput').value = '';
+    $('setup').style.display = 'flex';
+  }
 </script>
 </body>
 </html>
