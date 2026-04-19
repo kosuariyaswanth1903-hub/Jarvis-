@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jarvis Web AI</title>
+
+<style>
+body {
+  margin: 0;
+  background: black;
+  color: #00ffcc;
+  font-family: monospace;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+.container {
+  text-align: center;
+}
+h1 {
+  font-size: 3rem;
+  letter-spacing: 5px;
+}
+#status {
+  margin-top: 20px;
+  font-size: 1.2rem;
+  white-space: pre-line;
+}
+button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background: #00ffcc;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+  <h1>JARVIS</h1>
+  <p id="status">Click Start</p>
+  <button onclick="startSystem()">Start</button>
+</div>
+
+<script>
+const apiKey = "YOUR_OPENAI_API_KEY";
+
+let isAwake = false;
+const statusEl = document.getElementById("status");
+
+// 🔊 Speak
+function speak(text) {
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.lang = "en-US";
+  window.speechSynthesis.speak(speech);
+}
+
+// 🤖 AI call
+async function askAI(prompt) {
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + apiKey
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    return data.choices[0].message.content;
+
+  } catch (err) {
+    return "Error connecting to AI";
+  }
+}
+
+// 🎤 Listen
+function listen() {
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+
+  recognition.start();
+  statusEl.innerText = "Listening...";
+
+  recognition.onresult = async (event) => {
+    const text = event.results[0][0].transcript.toLowerCase();
+    statusEl.innerText = "You: " + text;
+
+    // Wake
+    if (!isAwake) {
+      if (text.includes("jarvis")) {
+        isAwake = true;
+        speak("Yes?");
+      }
+      return;
+    }
+
+    // Sleep
+    if (text.includes("sleep")) {
+      isAwake = false;
+      speak("Going to sleep");
+      return;
+    }
+
+    const reply = await askAI(text);
+    statusEl.innerText += "\nJarvis: " + reply;
+    speak(reply);
+  };
+
+  recognition.onerror = () => {
+    statusEl.innerText = "Mic error";
+  };
+}
+
+// 👏 Clap Detection
+async function startClapDetection() {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const audioContext = new AudioContext();
+  const mic = audioContext.createMediaStreamSource(stream);
+  const analyser = audioContext.createAnalyser();
+
+  mic.connect(analyser);
+  const data = new Uint8Array(analyser.frequencyBinCount);
+
+  function detect() {
+    analyser.getByteTimeDomainData(data);
+
+    let max = 0;
+    for (let i = 0; i < data.length; i++) {
+      let val = Math.abs(data[i] - 128);
+      if (val > max) max = val;
+    }
+
+    if (max > 60) {
+      statusEl.innerText = "👏 Clap detected! Say 'Jarvis'";
+      speak("I'm listening");
+
+      setTimeout(() => {
+        listen();
+      }, 800);
+    }
+
+    requestAnimationFrame(detect);
+  }
+
+  detect();
+}
+
+// 🚀 Start
+function startSystem() {
+  statusEl.innerText = "System Active...";
+  startClapDetection();
+}
+</script>
+
+</body>
+</html>
